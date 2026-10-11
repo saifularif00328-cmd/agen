@@ -16,12 +16,26 @@ echo "== 1/6 Paket sistem (python3, ffmpeg, git)"
 apt-get -o Acquire::http::Timeout=20 -o Acquire::Retries=2 update -q || echo "peringatan: apt update gagal, lanjut"
 DEBIAN_FRONTEND=noninteractive apt-get install -y -q python3 python3-venv ffmpeg git curl ca-certificates ufw
 
+echo "== 1b/6 Node.js 24 (dibutuhkan OpenClaw)"
+VER_NODE="$(node -v 2>/dev/null | sed 's/^v//; s/\..*//' || true)"
+if [ -z "$VER_NODE" ] || [ "$VER_NODE" -lt 24 ]; then
+  curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -q nodejs
+fi
+node -v
+
 echo "== 2/6 Pengguna khusus '$PENGGUNA' (OpenClaw tidak dijalankan sebagai root)"
 if ! id "$PENGGUNA" >/dev/null 2>&1; then
   adduser --disabled-password --gecos "" "$PENGGUNA"
 fi
 RUMAH="$(getent passwd "$PENGGUNA" | cut -d: -f6)"
 loginctl enable-linger "$PENGGUNA" 2>/dev/null || true   # layanan pengguna tetap jalan setelah logout
+# npm global milik pengguna agen di folder rumahnya → OpenClaw terpasang tanpa sudo
+sudo -u "$PENGGUNA" npm config set prefix "$RUMAH/.npm-global"
+for f in .bashrc .profile; do
+  touch "$RUMAH/$f"; chown "$PENGGUNA:$PENGGUNA" "$RUMAH/$f"
+  grep -q 'npm-global/bin' "$RUMAH/$f" || echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> "$RUMAH/$f"
+done
 
 echo "== 3/6 Kode agen di $RUMAH/agen"
 if [ -d "$RUMAH/agen/.git" ]; then

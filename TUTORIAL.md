@@ -52,7 +52,7 @@ sudo bash /root/agen-pasang/deploy/pasang_vps.sh
 ```
 
 Skrip akan:
-1. memasang Python, ffmpeg, git;
+1. memasang Python, ffmpeg, git, dan Node.js 24 (untuk OpenClaw);
 2. membuat pengguna khusus **`agen`** (OpenClaw tidak dijalankan sebagai root);
 3. menyalin kode ke `/home/agen/agen`;
 4. **menanyakan kunci API** — tempel kunci saat diminta (tidak terlihat di layar, itu normal), tekan Enter;
@@ -71,6 +71,9 @@ sudo -iu agen
 ```
 curl -fsSL https://openclaw.ai/install.sh | bash
 ```
+
+(Node.js 24 sudah dipasang oleh skrip bagian C.) Bila penginstal meminta password/sudo, tekan Ctrl+C lalu pakai:
+`npm install -g openclaw@latest` kemudian `openclaw onboard --install-daemon`.
 
 Penginstal otomatis membuka **onboarding**. Pilihan yang dipakai:
 - **Model provider:** OpenAI → tempel **OpenAI API key** Anda.
