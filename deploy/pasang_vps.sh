@@ -82,8 +82,10 @@ grep -q '^SOSMED_TZ=' "$ENVF" || echo 'SOSMED_TZ=Asia/Jakarta' >> "$ENVF"
 echo "== 6/6 Pasang skill ke workspace OpenClaw + jadwal bersih-bersih harian"
 WS="${OPENCLAW_WORKSPACE:-$RUMAH/.openclaw/workspace}"
 sudo -u "$PENGGUNA" mkdir -p "$WS/skills"
-sudo -u "$PENGGUNA" ln -sfn "$RUMAH/agen/skills/sosmed" "$WS/skills/sosmed"
-TUGAS="17 3 * * * $RUMAH/agen/skills/sosmed/scripts/sosmed bersihkan >> $RUMAH/.sosmed/bersihkan.log 2>&1"
+# OpenClaw menolak symlink yang keluar dari folder workspace → salin (diperbarui tiap skrip dijalankan)
+rm -rf "$WS/skills/sosmed"
+sudo -u "$PENGGUNA" cp -a "$RUMAH/agen/skills/sosmed" "$WS/skills/sosmed"
+TUGAS="17 3 * * * $WS/skills/sosmed/scripts/sosmed bersihkan >> $RUMAH/.sosmed/bersihkan.log 2>&1"
 ( crontab -u "$PENGGUNA" -l 2>/dev/null | grep -v 'sosmed bersihkan' || true; echo "$TUGAS" ) | crontab -u "$PENGGUNA" -
 
 echo
