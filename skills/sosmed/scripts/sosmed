@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Pembungkus: jalankan CLI dengan Python venv skill (dibuat deploy/pasang_vps.sh).
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY="${SOSMED_PY:-$HOME/.sosmed/venv/bin/python}"
+[ -x "$PY" ] || PY=python3
+exec "$PY" "$DIR/sosmed.py" "$@"
