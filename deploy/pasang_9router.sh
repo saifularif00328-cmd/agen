@@ -59,21 +59,23 @@ After=network-online.target
 EnvironmentFile=$ENVF
 Environment=PATH=$HOME/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
 WorkingDirectory=$DATA
-ExecStart=$BIN
+# tanpa layar (systemd) menu interaktif 9router langsung keluar → pakai mode latar (--tray) & ikat ke 127.0.0.1
+ExecStart=$BIN --tray --skip-update --no-browser --host 127.0.0.1 --port 20128
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=default.target
 EOF
-if systemctl --user daemon-reload 2>/dev/null && systemctl --user enable --now 9router 2>/dev/null; then
+if systemctl --user daemon-reload 2>/dev/null && systemctl --user enable 9router 2>/dev/null; then
   systemctl --user restart 9router
   echo "   Layanan systemd pengguna aktif (9router)."
 else
   echo "   systemd pengguna tidak tersedia; pakai cadangan nohup + @reboot."
   pkill -f "$BIN" 2>/dev/null || true
-  ( set -a; . "$ENVF"; set +a; cd "$DATA"; nohup "$BIN" >"$DATA/9router.log" 2>&1 & )
-  TUGAS="@reboot cd $DATA && set -a && . $ENVF && set +a && $BIN >$DATA/9router.log 2>&1"
+  ARGS="--tray --skip-update --no-browser --host 127.0.0.1 --port 20128"
+  ( set -a; . "$ENVF"; set +a; cd "$DATA"; nohup "$BIN" $ARGS >"$DATA/9router.log" 2>&1 < /dev/null & )
+  TUGAS="@reboot cd $DATA && set -a && . $ENVF && set +a && $BIN $ARGS >$DATA/9router.log 2>&1 < /dev/null"
   ( crontab -l 2>/dev/null | grep -v '9router' || true; echo "$TUGAS" ) | crontab -
 fi
 
