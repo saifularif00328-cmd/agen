@@ -35,6 +35,7 @@ sudo -u "$PENGGUNA" npm config set prefix "$RUMAH/.npm-global"
 for f in .bashrc .profile; do
   touch "$RUMAH/$f"; chown "$PENGGUNA:$PENGGUNA" "$RUMAH/$f"
   grep -q 'npm-global/bin' "$RUMAH/$f" || echo 'export PATH="$HOME/.npm-global/bin:$PATH"' >> "$RUMAH/$f"
+  grep -q 'XDG_RUNTIME_DIR' "$RUMAH/$f" || echo 'export XDG_RUNTIME_DIR=/run/user/$(id -u)' >> "$RUMAH/$f"
 done
 
 echo "== 3/6 Kode agen di $RUMAH/agen"

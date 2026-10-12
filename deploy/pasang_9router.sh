@@ -9,6 +9,9 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 export PATH="$HOME/.npm-global/bin:$PATH"
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+for f in .bashrc .profile; do   # agar systemctl --user jalan setelah `sudo -iu agen`
+  grep -q 'XDG_RUNTIME_DIR' "$HOME/$f" 2>/dev/null || echo 'export XDG_RUNTIME_DIR=/run/user/$(id -u)' >> "$HOME/$f"
+done
 DATA="$HOME/.9router"
 ENVF="$DATA/9router.env"
 
