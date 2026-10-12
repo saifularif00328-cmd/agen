@@ -180,3 +180,23 @@ tetap Anda lakukan sendiri (API grup ditutup Meta; otomatisasi berisiko akun dib
 ```
 bash ~/agen/deploy/perbarui.sh
 ```
+
+## M. 9Router di VPS (gateway AI untuk OpenClaw)
+
+Sebagai `agen`:
+```
+bash ~/agen/deploy/perbarui.sh
+bash ~/agen/deploy/pasang_9router.sh
+```
+9Router hanya mendengarkan di `127.0.0.1:20128` (tidak terbuka ke internet). Buka dashboard dari laptop lewat
+SSH tunnel — PowerShell baru, biarkan terbuka:
+```
+ssh -L 20128:127.0.0.1:20128 root@IP_VPS_ANDA
+```
+Browser laptop: `http://localhost:20128/dashboard` → login (password yang Anda buat) → sambungkan provider →
+buat **API key** → salin. Lalu di VPS:
+```
+python3 ~/agen/deploy/atur_ai.py
+```
+Pilih **1. 9Router di VPS ini** → Enter (Base URL bawaan) → tempel key → pilih model dari daftar → model utama.
+Cek layanan: `systemctl --user status 9router` · log: `journalctl --user -u 9router -n 50`.

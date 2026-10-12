@@ -12,15 +12,18 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 CFG = Path.home() / ".openclaw" / "openclaw.json"
 CONTOH = {
-    "1": ("relay", "RelayRouter / 9Router", "https://alamat-dari-penjual/v1"),
-    "2": ("openrouter", "OpenRouter", "https://openrouter.ai/api/v1"),
-    "3": ("kustom", "Provider lain (OpenAI-compatible)", "https://.../v1"),
+    "1": ("9router", "9Router di VPS ini", "http://127.0.0.1:20128/v1"),
+    "2": ("relay", "RelayRouter / 9Router dari penjual", "https://alamat-dari-penjual/v1"),
+    "3": ("openrouter", "OpenRouter", "https://openrouter.ai/api/v1"),
+    "4": ("kustom", "Provider lain (OpenAI-compatible)", "https://.../v1"),
 }
+URL_BAWAAN = {"1", "3"}
 
 
 class GalatAtur(Exception):
@@ -63,22 +66,62 @@ def tambah_provider(cfg_path, pid, base_url, api_key, models, utama=None):
     return [f"{pid}/{m}" for m in models]
 
 
+def daftar_model(base_url, api_key, buka=urllib.request.urlopen):
+    """Ambil daftar id model dari {base}/models (format OpenAI). Gagal → []."""
+    req = urllib.request.Request(base_url.rstrip("/") + "/models",
+                                 headers={"Authorization": f"Bearer {api_key}", "User-Agent": "sosmed-agen"})
+    try:
+        with buka(req, timeout=20) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return []
+    items = data.get("data", data) if isinstance(data, dict) else data
+    return sorted({m.get("id") for m in items if isinstance(m, dict) and m.get("id")}) if isinstance(items, list) else []
+
+
+def _pilih_model(ids):
+    for i, m in enumerate(ids, 1):
+        print(f"  {i:>3}. {m}")
+    teks = input("Pilih nomor model (pisahkan koma, mis. 1,3): ").strip()
+    hasil = []
+    for t in teks.split(","):
+        t = t.strip()
+        if t.isdigit() and 1 <= int(t) <= len(ids):
+            hasil.append(ids[int(t) - 1])
+    return hasil
+
+
 def main():
     print("== Tambah provider AI untuk OpenClaw ==")
     print("Gemini / OpenAI bawaan: pakai `openclaw onboard` (bagian Model).")
     for k, (_, nama, _) in CONTOH.items():
         print(f"  {k}. {nama}")
-    pilih = input("Pilih [1-3]: ").strip()
+    pilih = input(f"Pilih [1-{len(CONTOH)}]: ").strip()
     if pilih not in CONTOH:
         print("Batal.")
         return 1
     pid, nama, contoh_url = CONTOH[pilih]
-    if pilih == "3":
+    if pilih == "4":
         pid = input("Nama singkat provider (huruf kecil, mis. murah): ").strip().lower() or "kustom"
-    base = input(f"Base URL ({contoh_url}): ").strip() or (contoh_url if pilih == "2" else "")
+    tanda = " — Enter untuk memakai ini" if pilih in URL_BAWAAN else ""
+    base = input(f"Base URL ({contoh_url}{tanda}): ").strip() or (contoh_url if pilih in URL_BAWAAN else "")
     key = getpass.getpass("API key (tidak tampil saat diketik/ditempel): ").strip()
-    models = input("Nama model, pisahkan koma (mis. gemini-2.5-flash,gpt-4o-mini): ").split(",")
-    utama = input("Jadikan model utama? Ketik nama modelnya (kosong = tidak): ").strip() or None
+    ids = daftar_model(base, key) if base else []
+    if ids:
+        print(f"Ditemukan {len(ids)} model:")
+        models = _pilih_model(ids)
+    else:
+        print("Daftar model tidak bisa diambil (cek Base URL/key). Ketik manual.")
+        models = input("Nama model, pisahkan koma (mis. kr/claude-sonnet-4.5): ").split(",")
+    models = [m.strip() for m in models if m.strip()]
+    utama = None
+    if models:
+        print("Model utama (dipakai agen):")
+        for i, m in enumerate(models, 1):
+            print(f"  {i}. {m}")
+        u = input("Nomor model utama (Enter = 1, ketik 0 = jangan ubah model utama): ").strip() or "1"
+        if u.isdigit() and 1 <= int(u) <= len(models):
+            utama = models[int(u) - 1]
     try:
         refs = tambah_provider(CFG, pid, base, key, models, utama)
     except GalatAtur as e:

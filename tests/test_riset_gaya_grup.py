@@ -132,3 +132,27 @@ def test_tambah_provider_kustom(tmp_path):
             m.tambah_provider(cfg, *args)
     with pytest.raises(m.GalatAtur, match="utama"):
         m.tambah_provider(cfg, "relay", "https://a/v1", "k", ["m"], utama="lain")
+
+
+def test_daftar_model_9router():
+    import io
+    m = _atur_ai()
+
+    class R(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+    dilihat = {}
+
+    def buka(req, timeout):
+        dilihat["url"], dilihat["auth"] = req.full_url, req.get_header("Authorization")
+        return R(json.dumps({"object": "list", "data": [{"id": "kr/claude-sonnet-4.5"}, {"id": "cx/gpt-5.5"},
+                                                        {"id": "kr/claude-sonnet-4.5"}]}).encode())
+    assert m.daftar_model("http://127.0.0.1:20128/v1/", "sk-x", buka) == ["cx/gpt-5.5", "kr/claude-sonnet-4.5"]
+    assert dilihat == {"url": "http://127.0.0.1:20128/v1/models", "auth": "Bearer sk-x"}
+
+    def gagal(req, timeout):
+        raise OSError("tolak")
+    assert m.daftar_model("http://127.0.0.1:20128/v1", "k", gagal) == []
