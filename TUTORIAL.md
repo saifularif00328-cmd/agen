@@ -150,3 +150,33 @@ Kunci yang sudah ada tidak perlu diisi ulang (jawab `T` saat ditanya ganti).
 
 **Bila kunci pernah bocor** (terkirim ke chat/orang lain): segera buat kunci baru di dashboard terkait (Repliz,
 OpenAI, Cloudinary, atau `/revoke` di BotFather untuk token bot), lalu jalankan ulang skrip dan pilih ganti.
+
+## J. Fitur riset, gaya bahasa, dan grup Facebook
+
+Contoh perintah ke bot:
+- `tren apa yang lagi ramai hari ini? kasih 5 ide konten untuk usaha kopi saya`
+- `riset hashtag dan ide reels untuk jualan baju muslim`
+- `ingat gaya bahasa saya: santai, pakai "kak", tanpa emoji berlebihan` · *(kirim contoh caption)* `simpan ini sebagai contoh gaya saya`
+- `carikan grup facebook jual beli di Medan untuk promo kopi, catat ya` · `tampilkan daftar grup` · `grup Jual Beli Medan sudah saya posting`
+
+Grup Facebook: agen **mencari dan mencatat** grup + menyiapkan teks promo per grup. Bergabung dan menempel postingan
+tetap Anda lakukan sendiri (API grup ditutup Meta; otomatisasi berisiko akun diblokir).
+
+## K. Ganti / tambah "otak" AI
+
+- **Ganti model dari Telegram:** ketik `/model` (muncul menu) atau `/model google/gemini-2.5-flash`.
+- **Tambah provider baru** (RelayRouter/9Router, OpenRouter, atau layanan lain yang memberi *Base URL* + *API key*),
+  di VPS sebagai `agen`:
+  ```
+  python3 ~/agen/deploy/atur_ai.py
+  ```
+  Isi Base URL, key (tidak tampil), nama model → otomatis tersimpan & gateway dinyalakan ulang.
+- Gemini/OpenAI bawaan: `openclaw onboard` bagian Model.
+- Pesan "The AI service needs a short break" = kuota/batas per menit provider habis (umum di Gemini gratis).
+  Tunggu 1–2 menit, atau pindah model/provider.
+
+## L. Memperbarui agen (tanpa sudo)
+
+```
+bash ~/agen/deploy/perbarui.sh
+```

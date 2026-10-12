@@ -78,6 +78,15 @@ class Repliz:
     def hapus_jadwal(self, schedule_id):
         self._req("DELETE", f"/public/schedule/{schedule_id}")
 
+    # --- riset ---
+    def cari_threads(self, account_id, kata, mode="KEYWORD", urut="TOP"):
+        return self._req("GET", "/public/research/threads/content/search",
+                         params={"accountId": account_id, "search": kata, "mode": mode, "sort": urut})
+
+    def musik_tiktok(self, genre="ALL", negara="ID", rentang="7DAY"):
+        return self._req("GET", "/public/addon/tiktok/music",
+                         params={"genre": genre, "countryCode": negara, "dateRange": rentang})
+
 
 def body_jadwal(*, account_id, tipe, caption, judul, medias, schedule_at, ai=False):
     """Susun body POST /public/schedule — semua field wajib skema diisi (kosong bila tak dipakai)."""

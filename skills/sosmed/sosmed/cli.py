@@ -6,7 +6,11 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import cloudinary, gambar, media, platform
+import requests
+
+from . import cloudinary, gambar, media, platform, riset
+from .gaya import Gaya, GalatGaya
+from .grup import Grup, GalatGrup
 from .config import muat
 from .draf import GalatDraf, Gudang, parse_jadwal, sekarang_utc, tampil_lokal
 from .repliz import GalatRepliz, KuotaHabis, Repliz, body_jadwal
@@ -279,6 +283,36 @@ class App:
         self.gudang.ubah_status(d, "ditolak", "dibatalkan pemilik")
         return {"id": did, "dibatalkan": dibatalkan}
 
+    # ---------- riset ----------
+    def tren(self, geo="ID", jumlah=15):
+        return {"sumber": "Google Trends (pencarian harian)", "geo": geo,
+                "tren": riset.tren_google(geo, jumlah, session=self.session)}
+
+    def tren_threads(self, kata, mode="KEYWORD", urut="TOP"):
+        akun = [a for a in self.akun() if a["platform"] == "threads" and a.get("tersambung")]
+        if not akun:
+            raise Galat("Riset Threads butuh akun Threads yang tersambung di Repliz.")
+        data = self.repliz.cari_threads(akun[0]["id"], kata, mode, urut)
+        return {"kata": kata, "hasil": riset.ringkas_threads(data)}
+
+    def musik_tiktok(self, genre="ALL", rentang="7DAY"):
+        try:
+            data = self.repliz.musik_tiktok(genre, "ID", rentang)
+        except GalatRepliz as e:
+            if e.status in (402, 403):
+                raise Galat("Musik tren TikTok butuh add-on TikTok Music di paket Repliz.")
+            raise
+        return {"genre": genre, "rentang": rentang, "musik": riset.ringkas_musik(data)}
+
+    # ---------- gaya & grup ----------
+    @property
+    def gaya(self):
+        return Gaya(self.cfg.data_dir)
+
+    @property
+    def grup(self):
+        return Grup(self.cfg.data_dir)
+
     def bersihkan(self):
         kini = sekarang_utc()
         batas = kini - timedelta(days=self.cfg.hari_simpan)
@@ -356,6 +390,40 @@ def parser():
     ls = sub.add_parser("daftar")
     ls.add_argument("--status", choices=("menunggu", "disetujui", "ditolak", "dikirim", "sebagian", "gagal"))
     sub.add_parser("bersihkan", help="hapus media lama yang sudah tayang")
+    tr = sub.add_parser("tren", help="topik yang sedang ramai dicari (Google Trends)")
+    tr.add_argument("--geo", default="ID")
+    tr.add_argument("--jumlah", type=int, default=15)
+    tt = sub.add_parser("tren-threads", help="cari postingan Threads populer untuk kata kunci/hashtag")
+    tt.add_argument("kata")
+    tt.add_argument("--mode", default="KEYWORD", choices=("KEYWORD", "TAG"))
+    tt.add_argument("--urut", default="TOP", choices=("TOP", "RECENT"))
+    mt = sub.add_parser("musik-tiktok", help="musik tren TikTok Indonesia (add-on Repliz)")
+    mt.add_argument("--genre", default="ALL")
+    mt.add_argument("--rentang", default="7DAY", choices=("1DAY", "7DAY", "30DAY", "90DAY"))
+    ga = sub.add_parser("gaya", help="lihat/atur gaya bahasa pemilik")
+    gs = ga.add_subparsers(dest="aksi", required=True)
+    gs.add_parser("lihat")
+    gs.add_parser("reset")
+    gs.add_parser("atur").add_argument("deskripsi")
+    gs.add_parser("contoh").add_argument("teks")
+    gs.add_parser("hapus-contoh").add_argument("nomor", type=int)
+    gr = sub.add_parser("grup", help="catatan grup Facebook untuk promo manual")
+    grs = gr.add_subparsers(dest="aksi", required=True)
+    g1 = grs.add_parser("simpan")
+    g1.add_argument("--nama", required=True)
+    g1.add_argument("--url", required=True)
+    g1.add_argument("--anggota", default="")
+    g1.add_argument("--aturan", default="")
+    g1.add_argument("--topik", default="")
+    g2 = grs.add_parser("daftar")
+    g2.add_argument("--topik")
+    g2.add_argument("--status")
+    g3 = grs.add_parser("tandai")
+    g3.add_argument("id")
+    g3.add_argument("--status", required=True)
+    g3.add_argument("--catatan", default="")
+    g3.add_argument("--promo", action="store_true", help="catat bahwa barusan dipromosikan")
+    grs.add_parser("hapus").add_argument("id")
     return p
 
 
@@ -382,6 +450,32 @@ def jalankan(argv, app=None):
         return {"draf": app.daftar(args.status)}
     if c == "bersihkan":
         return app.bersihkan()
+    if c == "tren":
+        return app.tren(args.geo, args.jumlah)
+    if c == "tren-threads":
+        return app.tren_threads(args.kata, args.mode, args.urut)
+    if c == "musik-tiktok":
+        return app.musik_tiktok(args.genre, args.rentang)
+    if c == "gaya":
+        g = app.gaya
+        if args.aksi == "lihat":
+            return g.lihat()
+        if args.aksi == "reset":
+            return g.reset()
+        if args.aksi == "atur":
+            return g.atur(args.deskripsi)
+        if args.aksi == "contoh":
+            return g.tambah_contoh(args.teks)
+        return g.hapus_contoh(args.nomor)
+    if c == "grup":
+        g = app.grup
+        if args.aksi == "simpan":
+            return g.simpan(args.nama, args.url, args.anggota, args.aturan, args.topik)
+        if args.aksi == "daftar":
+            return {"grup": g.daftar(args.topik, args.status)}
+        if args.aksi == "tandai":
+            return g.tandai(args.id, args.status, args.catatan, args.promo)
+        return g.hapus(args.id)
     return getattr(app, c)(args.id)
 
 
@@ -392,6 +486,10 @@ def main(argv=None):
                          ensure_ascii=False, indent=1))
         return 0
     except (Galat, GalatDraf, GalatRepliz, platform.GalatPlatform, media.GalatMedia,
-            cloudinary.GalatCloudinary, gambar.GalatGambar) as e:
+            cloudinary.GalatCloudinary, gambar.GalatGambar, riset.GalatRiset, GalatGaya, GalatGrup) as e:
         print(json.dumps({"ok": False, "galat": str(e)}, ensure_ascii=False))
+        return 1
+    except requests.RequestException as e:
+        print(json.dumps({"ok": False, "galat": f"Gagal terhubung ke internet/layanan: {type(e).__name__}"},
+                         ensure_ascii=False))
         return 1
