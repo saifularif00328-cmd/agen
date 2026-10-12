@@ -156,3 +156,11 @@ def test_daftar_model_9router():
     def gagal(req, timeout):
         raise OSError("tolak")
     assert m.daftar_model("http://127.0.0.1:20128/v1", "k", gagal) == []
+
+
+def test_urai_pilihan_model():
+    m = _atur_ai()
+    ids = ["agen", "a", "b", "c", "d"]
+    assert m.urai_pilihan("semua", ids) == ids and m.urai_pilihan(" ALL ", ids) == ids
+    assert m.urai_pilihan("1, 3-4, 3, 99", ids) == ["agen", "b", "c"]
+    assert m.urai_pilihan("x", ids) == []

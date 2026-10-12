@@ -79,16 +79,29 @@ def daftar_model(base_url, api_key, buka=urllib.request.urlopen):
     return sorted({m.get("id") for m in items if isinstance(m, dict) and m.get("id")}) if isinstance(items, list) else []
 
 
+def urai_pilihan(teks, ids):
+    """'semua' / 'all' / '*' → semua; '1,3,5-8' → nomor & rentang. Urutan dipertahankan, tanpa duplikat."""
+    teks = (teks or "").strip().lower()
+    if teks in ("semua", "all", "*"):
+        return list(ids)
+    hasil = []
+    for t in teks.replace(" ", "").split(","):
+        if "-" in t:
+            a, _, b = t.partition("-")
+            if a.isdigit() and b.isdigit():
+                for n in range(int(a), int(b) + 1):
+                    if 1 <= n <= len(ids) and ids[n - 1] not in hasil:
+                        hasil.append(ids[n - 1])
+        elif t.isdigit() and 1 <= int(t) <= len(ids) and ids[int(t) - 1] not in hasil:
+            hasil.append(ids[int(t) - 1])
+    return hasil
+
+
 def _pilih_model(ids):
     for i, m in enumerate(ids, 1):
         print(f"  {i:>3}. {m}")
-    teks = input("Pilih nomor model (pisahkan koma, mis. 1,3): ").strip()
-    hasil = []
-    for t in teks.split(","):
-        t = t.strip()
-        if t.isdigit() and 1 <= int(t) <= len(ids):
-            hasil.append(ids[int(t) - 1])
-    return hasil
+    teks = input("Pilih model: nomor (mis. 1,3,5-8) atau ketik 'semua': ")
+    return urai_pilihan(teks, ids)
 
 
 def main():
